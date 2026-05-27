@@ -1,0 +1,5 @@
+Step 1 | Action : RIGHT | Pos : (4, 1) | Score : -1 | Event : NONE
+Step 2 | Action : RIGHT | Pos : (4, 2) | Score : -2 | Event : NONE
+Step 3 | Action : UP | Pos : (3, 2) | Score : -3 | Event : NONE
+Step 4 | Action : UP | Pos : (2, 2) | Score : 6 | Event : BONUS (+10)
+RESULT : LIMIT | Steps : 4 | Final Score : 6

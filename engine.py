@@ -31,10 +31,11 @@ def apply_action(state, action, grid, rules):
     """
     # Strictest constraint from Page 12/15: Always deepcopy the state first!
     next_state = copy.deepcopy(state)
+    event = "NONE"
     
     # If the game is already over, do not process actions further
     if is_terminal(next_state, rules):
-        return next_state
+        return next_state, event
 
     # 1. Standard increments applied to every action
     next_state["steps"] += 1
@@ -43,8 +44,6 @@ def apply_action(state, action, grid, rules):
     current_row, current_col = next_state["pos"]
     N = len(grid)
     M = len(grid[0]) if N > 0 else 0
-    #compute destination coordinates based on the action movement matrix
-    
 
     # 2. Compute destination coordinates based on the action movement matrix
     next_row, next_col = current_row, current_col
@@ -60,7 +59,7 @@ def apply_action(state, action, grid, rules):
         pass  # Position stays exactly the same
     else:
         # Fallback safeguard for untracked manual actions
-        return next_state
+        return next_state, event
 
     # 3. Check collision with grid boundaries or obstacle cells 'X'
     # Consistent choice rule: movement is safely ignored, but cost/step are kept
@@ -68,7 +67,7 @@ def apply_action(state, action, grid, rules):
         # Player stays in original position, check if steps hit limit after this bump
         if next_state["steps"] >= rules["MAX_MOVES"]:
             next_state["status"] = "LIMIT"
-        return next_state
+        return next_state, event
 
     # 4. Valid movement confirmed: Update the player's position tracking tuple
     next_state["pos"] = (next_row, next_col)
@@ -80,6 +79,7 @@ def apply_action(state, action, grid, rules):
     if cell_type == 'T':
         next_state["score"] += rules["TARGET_BONUS"]
         next_state["status"] = "SUCCESS"
+        event = f"TARGET (+{rules['TARGET_BONUS']})"
 
     # --- BONUS (B) ---
     elif cell_type == 'B':
@@ -87,14 +87,17 @@ def apply_action(state, action, grid, rules):
         if (next_row, next_col) not in next_state["collected"]:
             next_state["score"] += rules["BONUS_POINTS"]
             next_state["collected"].add((next_row, next_col))
+            event = f"BONUS (+{rules['BONUS_POINTS']})"
 
     # --- ENNEMI (E) ---
     elif cell_type == 'E':
         if rules["ENEMY_MODE"] == "death":
             next_state["status"] = "FAILURE"
+            event = "ENEMY (death)"
         elif rules["ENEMY_MODE"] == "health":
             next_state["score"] -= rules["ENEMY_PENALTY"]
             next_state["hp"] -= 1
+            event = f"ENEMY (-{rules['ENEMY_PENALTY']} HP)"
             if next_state["hp"] <= 0:
                 next_state["status"] = "FAILURE"
 
@@ -102,7 +105,7 @@ def apply_action(state, action, grid, rules):
     if next_state["status"] == "CONTINUE" and next_state["steps"] >= rules["MAX_MOVES"]:
         next_state["status"] = "LIMIT"
 
-    return next_state
+    return next_state, event
 
 
 # --- Local Unit Testing Block ---
@@ -141,3 +144,12 @@ if __name__ == "__main__":
     # Step 5: Test wall collision behavior -> should bounce back but cost 1 point
     s5 = apply_action(s4, "DOWN", mock_grid, mock_rules) # hit 'X' at (1,1)
     print(f"Step 5 (Wall Collision): Pos={s5['pos']} (Should stay at 0,2), Score={s5['score']} (Should drop to 7)")
+def init_state(start_pos, rules):
+    return {
+        "pos": start_pos,
+        "score": 0,
+        "steps": 0,
+        "collected": set(),
+        "hp": rules.get('HP', 1),
+        "status": "CONTINUE"
+    }
